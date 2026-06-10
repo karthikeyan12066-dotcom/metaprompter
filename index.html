@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta Prompter v2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #070d09;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    color: #c8e0d0;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0a120c; }
+  ::-webkit-scrollbar-thumb { background: #1e3a28; border-radius: 2px; }
+
+  /* Header */
+  header {
+    padding: 32px 40px 28px;
+    border-bottom: 1px solid #0f1f17;
+    background: linear-gradient(180deg, #0a120c 0%, #070d09 100%);
+  }
+  .header-inner { max-width: 860px; margin: 0 auto; }
+  .header-row { display: flex; align-items: baseline; gap: 16px; margin-bottom: 6px; }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #e8f5ec;
+  }
+  .version-badge {
+    font-size: 10px;
+    color: #2a6a4a;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+    background: #0a1f12;
+    border: 1px solid #1a3a28;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .subtitle { color: #3a6a4a; font-size: 12px; letter-spacing: 0.03em; }
+
+  /* Main */
+  main { max-width: 900px; margin: 0 auto; padding: 32px 40px; width: 100%; }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #0f1f17;
+    background: #080f0a;
+  }
+  .panel-label { font-size: 10px; color: #2a5a3a; letter-spacing: 0.12em; }
+
+
+  /* Input block */
+  .input-block {
+    background: #0a120c;
+    border: 1px solid #1a2e1e;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .char-count { font-size: 10px; color: #1a3a28; letter-spacing: 0.05em; }
+  textarea {
+    width: 100%;
+    min-height: 140px;
+    background: transparent;
+    border: none;
+    color: #c8e0d0;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 16px;
+    resize: vertical;
+    font-family: 'DM Mono', monospace;
+  }
+  textarea:focus { outline: none; }
+  textarea::placeholder { color: #1e3a28; }
+
+  /* Example pills */
+  .pills-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  .try-label { font-size: 10px; color: #1e3a28; letter-spacing: 0.1em; }
+  .pill {
+    background: #0a120c;
+    border: 1px solid #1a2e1e;
+    color: #3a6a4a;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .pill:hover { background: #0f1f17; color: #4adf8a; border-color: #2a5a3a; }
+
+  /* Analyze button */
+  .analyze-btn {
+    width: 100%;
+    padding: 14px;
+    background: #0f1f17;
+    border: 1px solid #1e3a28;
+    color: #4adf8a;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    font-family: 'DM Mono', monospace;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 32px;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .analyze-btn:hover:not(:disabled) { background: #1a3a28; border-color: #2a6a4a; }
+  .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px; color: #2a5a3a; }
+  .loading-label { font-size: 11px; letter-spacing: 0.15em; margin-bottom: 16px; }
+  .dots { display: flex; justify-content: center; gap: 6px; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #2a6a4a;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* Error */
+  .error-box {
+    padding: 14px 16px;
+    background: #1a0808;
+    border: 1px solid #3a1818;
+    border-radius: 8px;
+    color: #df6a4a;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+
+  /* Verdict bar */
+  .verdict-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+  }
+  .verdict-bar-left { display: flex; align-items: center; gap: 12px; }
+  .verdict-badge {
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .verdict-summary { color: #4a7a5a; font-size: 12px; }
+  .verdict-count { font-size: 11px; color: #3a5a4a; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid #0f1f17; margin-bottom: 16px; }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #3a5a4a;
+    padding: 8px 20px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: -1px;
+    transition: color 0.15s;
+    text-transform: uppercase;
+  }
+  .tab-btn:hover { color: #4adf8a; }
+  .tab-btn.active { color: #4adf8a; border-bottom-color: #4adf8a; }
+
+  /* Output block */
+  .output-block {
+    background: #0a120c;
+    border: 1px solid #1a2e1e;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .output-content {
+    padding: 20px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: #b0d0be;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Copy button */
+  .copy-btn {
+    background: #0f1f17;
+    border: 1px solid #1e3a28;
+    color: #5a8a6a;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+  }
+  .copy-btn.copied { background: #1a3a2a; border-color: #2a7a4a; color: #4adf8a; }
+
+  /* Issue tags */
+  .issue-tag {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #0c1a10;
+    border: 1px solid #1a2e1e;
+    border-left: 3px solid #e8a03a;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .issue-icon { color: #e8a03a; font-size: 11px; margin-top: 1px; flex-shrink: 0; }
+  .issue-text { color: #8ab89a; font-size: 13px; line-height: 1.5; }
+
+  .hidden { display: none; }
+
+  @media (max-width: 600px) {
+    header, main { padding: 20px; }
+    h1 { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-row">
+      <h1>META PROMPTER</h1>
+      <span class="version-badge">v2.0</span>
+    </div>
+    <p class="subtitle">Paste any prompt → get a production-ready rewrite with issue analysis &nbsp;·&nbsp; powered by Groq</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- Groq API Key -->
+  <div class="input-block" style="margin-bottom:20px;">
+    <div class="panel-header">
+      <span class="panel-label">GROQ API KEY</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="keySavedBadge" style="font-size:10px;color:#2a6a4a;letter-spacing:0.05em;display:none;">✓ SAVED</span>
+        <button onclick="clearApiKey()" id="clearKeyBtn" style="display:none;background:none;border:none;color:#5a4a2a;font-size:10px;font-family:'DM Mono',monospace;cursor:pointer;letter-spacing:0.05em;">✕ CLEAR</button>
+      </div>
+    </div>
+    <input type="password" id="apiKey" placeholder="gsk_... (paste once, auto-saved)" autocomplete="off"
+      style="width:100%;background:transparent;border:none;color:#c8e0d0;font-size:13px;padding:14px 16px;font-family:'DM Mono',monospace;letter-spacing:0.05em;">
+    <div style="font-size:10px;color:#1a3a28;padding:0 16px 10px;letter-spacing:0.05em;">
+      Get your free key at <a href="https://console.groq.com" target="_blank" style="color:#2a5a3a;text-decoration:none;">console.groq.com</a> · Saved in your browser's localStorage
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-block">
+    <div class="panel-header">
+      <span class="panel-label">INPUT PROMPT</span>
+      <span class="char-count" id="charCount">0 chars</span>
+    </div>
+    <textarea id="promptInput" placeholder="Paste your vague or underspecified prompt here..."></textarea>
+  </div>
+
+  <!-- Example pills -->
+  <div class="pills-row">
+    <span class="try-label">TRY:</span>
+    <button class="pill" onclick="setExample('Summarize this article')">Summarize this article</button>
+    <button class="pill" onclick="setExample('Write me a cover letter')">Write me a cover letter</button>
+    <button class="pill" onclick="setExample('Help me with my code')">Help me with my code</button>
+    <button class="pill" onclick="setExample('Explain machine learning')">Explain machine learning</button>
+    <button class="pill" onclick="setExample('Make this email better')">Make this email better</button>
+  </div>
+
+  <!-- Analyze -->
+  <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">ANALYZE &amp; IMPROVE &nbsp; Ctrl+↵</button>
+
+  <!-- Loading -->
+  <div class="loading hidden" id="loading">
+    <div class="loading-label">PROCESSING PROMPT</div>
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box hidden" id="errorBox"></div>
+
+  <!-- Result -->
+  <div id="result" class="hidden">
+
+    <!-- Verdict bar -->
+    <div class="verdict-bar" id="verdictBar">
+      <div class="verdict-bar-left">
+        <span class="verdict-badge" id="verdictBadge"></span>
+        <span class="verdict-summary" id="verdictSummary"></span>
+      </div>
+      <span class="verdict-count" id="verdictCount"></span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs hidden" id="tabs">
+      <button class="tab-btn active" id="tabImproved" onclick="switchTab('improved')">Improved Prompt</button>
+      <button class="tab-btn" id="tabIssues" onclick="switchTab('issues')">Issues</button>
+    </div>
+
+    <!-- Improved prompt panel -->
+    <div class="output-block" id="improvedPanel">
+      <div class="panel-header">
+        <span class="panel-label">PRODUCTION-READY PROMPT</span>
+        <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">COPY</button>
+      </div>
+      <div class="output-content" id="improvedText"></div>
+    </div>
+
+    <!-- Issues panel -->
+    <div id="issuesPanel" class="hidden"></div>
+
+  </div>
+</main>
+
+<script>
+const SYSTEM_PROMPT = `You are a Meta Prompter — a specialist in transforming prompts into production-ready instructions for large language models (Claude, GPT-4-class, and instruction-tuned open-source models).
+
+Your rewriting process follows a strict internal checklist before producing output:
+
+ANALYSIS PHASE (internal, not shown):
+1. Identify the prompt's core task and intended audience
+2. Flag every vague term, implicit assumption, and missing constraint
+3. Determine the target model family and appropriate prompt format
+4. Assess whether the input is too ambiguous to improve without guessing
+
+REWRITING RULES:
+- Replace vague language with precise, unambiguous instructions
+- Add domain-specific context the model needs to perform accurately
+- Define the exact output format: structure, sections, length range, and tone
+- Set explicit constraints: what to include, what to avoid, edge cases to handle
+- Specify the intended audience and their expertise level
+- State the desired output modality (prose, JSON, markdown, list, code, etc.)
+- Preserve the original intent exactly — enhance clarity only, never alter the goal
+- Use imperative voice for all instructions ("Return...", "Do not...", "Format as...")
+- Eliminate redundancy — no padding, no restating what's already clear
+
+OUTPUT FORMAT RULES (strict):
+You must respond in valid JSON with this exact structure:
+{
+  "verdict": "IMPROVED" | "AMBIGUOUS" | "ALREADY_OPTIMIZED",
+  "issues": ["list of specific problems found in the original (empty if ALREADY_OPTIMIZED)"],
+  "improved_prompt": "the full rewritten prompt, or the original if ALREADY_OPTIMIZED",
+  "changes_summary": "one concise sentence describing the most impactful change made"
+}
+
+SPECIAL CASES:
+- If the prompt is too vague to improve without guessing intent: verdict = "AMBIGUOUS", explain in issues[], leave improved_prompt as the original
+- If the prompt is already production-ready: verdict = "ALREADY_OPTIMIZED", issues = [], improved_prompt = original unchanged
+- Never fabricate a task — if intent is unclear, say so
+
+Respond ONLY with valid JSON. No markdown fences, no preamble, no commentary outside the JSON object.`;
+
+const VERDICT_CONFIG = {
+  IMPROVED:          { color: '#4adf8a', bg: '#0a1f12', label: 'IMPROVED',   icon: '↑' },
+  AMBIGUOUS:         { color: '#e8a03a', bg: '#1a1205', label: 'AMBIGUOUS',  icon: '?' },
+  ALREADY_OPTIMIZED: { color: '#4a9adf', bg: '#050f1a', label: 'OPTIMIZED',  icon: '✓' },
+};
+
+let currentResult = null;
+let currentTab = 'improved';
+
+// Load saved API key on startup
+(function loadSavedKey() {
+  const saved = localStorage.getItem('groq_api_key');
+  if (saved) {
+    document.getElementById('apiKey').value = saved;
+    document.getElementById('keySavedBadge').style.display = 'inline';
+    document.getElementById('clearKeyBtn').style.display = 'inline';
+  }
+})();
+
+// Auto-save key when user types it
+document.getElementById('apiKey').addEventListener('change', function() {
+  const val = this.value.trim();
+  if (val) {
+    localStorage.setItem('groq_api_key', val);
+    document.getElementById('keySavedBadge').style.display = 'inline';
+    document.getElementById('clearKeyBtn').style.display = 'inline';
+  }
+});
+
+function clearApiKey() {
+  localStorage.removeItem('groq_api_key');
+  document.getElementById('apiKey').value = '';
+  document.getElementById('keySavedBadge').style.display = 'none';
+  document.getElementById('clearKeyBtn').style.display = 'none';
+}
+
+// Char counter
+document.getElementById('promptInput').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length + ' chars';
+});
+
+// Ctrl+Enter shortcut
+document.getElementById('promptInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyze();
+});
+
+function setExample(text) {
+  document.getElementById('promptInput').value = text;
+  document.getElementById('charCount').textContent = text.length + ' chars';
+}
+
+function show(id)   { document.getElementById(id).classList.remove('hidden'); }
+function hide(id)   { document.getElementById(id).classList.add('hidden'); }
+function setText(id, text) { document.getElementById(id).textContent = text; }
+
+async function analyze() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const input  = document.getElementById('promptInput').value.trim();
+
+  if (!apiKey) { showError('Enter your Groq API key above.'); return; }
+  if (!input)  { showError('Paste a prompt to analyze.'); return; }
+
+  hide('errorBox');
+  hide('result');
+  show('loading');
+  document.getElementById('analyzeBtn').disabled = true;
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user',   content: 'Analyze and improve this prompt:\n\n' + input }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'API error ' + response.status);
+    }
+
+    const data  = await response.json();
+    const raw   = data.choices[0].message.content || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    currentResult = JSON.parse(clean);
+    renderResult(currentResult);
+
+  } catch(e) {
+    showError('Error: ' + e.message);
+  } finally {
+    hide('loading');
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+}
+
+function showError(msg) {
+  hide('loading');
+  hide('result');
+  document.getElementById('errorBox').textContent = '⚠ ' + msg;
+  show('errorBox');
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+function renderResult(r) {
+  const vc = VERDICT_CONFIG[r.verdict] || VERDICT_CONFIG.IMPROVED;
+
+  // Verdict bar
+  const bar = document.getElementById('verdictBar');
+  bar.style.background = vc.bg;
+  bar.style.borderColor = vc.color + '33';
+
+  const badge = document.getElementById('verdictBadge');
+  badge.textContent = vc.icon + ' ' + vc.label;
+  badge.style.color = vc.color;
+  badge.style.background = vc.color + '18';
+  badge.style.borderColor = vc.color + '44';
+
+  setText('verdictSummary', r.changes_summary || '');
+
+  const issues = r.issues || [];
+  if (issues.length > 0) {
+    document.getElementById('verdictCount').textContent = issues.length + ' issue' + (issues.length !== 1 ? 's' : '') + ' found';
+  } else {
+    setText('verdictCount', '');
+  }
+
+  // Improved text
+  document.getElementById('improvedText').textContent = r.improved_prompt || '';
+
+  // Issues panel
+  const issuesPanel = document.getElementById('issuesPanel');
+  issuesPanel.innerHTML = '';
+  issues.forEach(issue => {
+    const div = document.createElement('div');
+    div.className = 'issue-tag';
+    div.innerHTML = '<span class="issue-icon">⚠</span><span class="issue-text">' + escapeHtml(issue) + '</span>';
+    issuesPanel.appendChild(div);
+  });
+
+  // Tabs — only show if there are issues
+  if (issues.length > 0) {
+    document.getElementById('tabIssues').textContent = 'Issues (' + issues.length + ')';
+    show('tabs');
+  } else {
+    hide('tabs');
+  }
+
+  switchTab('improved');
+  show('result');
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabImproved').classList.toggle('active', tab === 'improved');
+  document.getElementById('tabIssues').classList.toggle('active', tab === 'issues');
+
+  if (tab === 'improved') {
+    show('improvedPanel');
+    hide('issuesPanel');
+  } else {
+    hide('improvedPanel');
+    show('issuesPanel');
+  }
+}
+
+async function copyPrompt() {
+  if (!currentResult) return;
+  try {
+    await navigator.clipboard.writeText(currentResult.improved_prompt);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ COPIED';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+  } catch(e) {}
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
